@@ -1,12 +1,18 @@
 
 const stompit = require('stompit');
+const Connections = require("./connection")
+const Constants = require("./constants")
 
 const config ={
     ActiveMQConfig: {
       reconnectOptions: {
-        maxReconnects: 10,
+        // maxReconnects: 10,
         useExponentialBackOff: true,
-        'heart-beat': '5000,5000'
+        connect: {
+          connectHeaders: {
+            'heart-beat': '5000,5000'
+          }
+        }
       },
       serverList: [
         {
@@ -51,7 +57,8 @@ function connectActiveMQ() {
         reconnect();
       });
       console.info(`ActiveMQConnector.connectActiveMQ | connection established successfully`);
-      activeMQClient = client;
+      Connections.set(Constants.CONNECTION_TYPES.ACTIVEMQ, client);
+      activeMQClient = Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ);
       return resolve(activeMQClient);
     });
   });

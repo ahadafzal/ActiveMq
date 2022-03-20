@@ -1,6 +1,8 @@
 const { EventEmitter } = require('events');
 const stompit = require('stompit');
 const activeMQ = require('./activeMQ');
+const Connections = require("./connection")
+const Constants = require("./constants")
 
 
 class ActiveMQProducer extends EventEmitter {
@@ -12,7 +14,7 @@ class ActiveMQProducer extends EventEmitter {
 constructor(destination, JMSDeliveryMode, type, contentType) {
     super();
     activeMQ.getActiveMQClient().then(activeMQClient => {
-    this.setClient(activeMQClient);
+    this.setClient(Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ));
     this.setQueueParams(destination, JMSDeliveryMode, type, contentType);
     })
     .catch(error => {
@@ -26,7 +28,7 @@ setQueueParams(destination, JMSDeliveryMode, type, contentType) {
     this.JMSDeliveryMode = JMSDeliveryMode;
     this.type = type;
     this.contentType = contentType;
-    if (this.client) {
+    if (Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ)) {
     this.ready = true;
     } else {
     this.ready = false;
@@ -37,7 +39,7 @@ reconnectClient() {
     if (!this.ready) {
     activeMQ.connectActiveMQ()
         .then(activeMQClient => {
-        this.setClient(activeMQClient);
+        this.setClient(Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ));
         console.info(` | connection established`);
         })
         .catch(error => {
@@ -48,11 +50,11 @@ reconnectClient() {
 }
 
 getClient() {
-    return this.client;
+    return Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ);
 }
 
 setClient(activeMQClient) {
-    this.client = activeMQClient;
+    // this.client = activeMQClient;
     this.ready = true;
 }
 
@@ -70,12 +72,10 @@ _sendMessage (data) {
         'JMSDeliveryMode'	: this.JMSDeliveryMode,
         '_type'						: this.type
         };
-        console.log(sendParams)
-
-        let frame = this.client.send(sendParams);
+        let frame = Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ).send(sendParams);
         frame.write(data);
         frame.end();
-        console.info(` | message send | ${JSON.stringify(data)}`);
+        console.info(` | message send`);
         resolve("success");
     }catch(error) {
         console.error(` | error while sending message | ${JSON.stringify(error)}`);
@@ -89,7 +89,7 @@ _sendMessage (data) {
      */
 disconnectClient() {
     try {
-    this.client.disconnect((error, response) => {
+        Connections.get(Constants.CONNECTION_TYPES.ACTIVEMQ).disconnect((error, response) => {
         console.info(` | disconnectClient response | error | ${JSON.stringify(error)} | response | ${JSON.stringify(response)}`)
     });
     }catch(error) {
